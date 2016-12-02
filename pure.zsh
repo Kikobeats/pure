@@ -122,13 +122,13 @@ prompt_pure_string_length_to_var() {
 	typeset -g "${var}"="${length}"
 }
 
+pwd_tilde() {
+  dir=$(basename $PWD)
+  tilde=$(basename $HOME)
+  echo ${dir/$tilde/\~}
+}
+
 prompt_pure_preprompt_render() {
-	# store the current prompt_subst setting so that it can be restored later
-	local prompt_subst_status=$options[prompt_subst]
-
-	# make sure prompt_subst is unset to prevent parameter expansion in preprompt
-	setopt local_options no_prompt_subst
-
 	# check that no command is currently running, the preprompt will otherwise be rendered in the wrong place
 	[[ -n ${prompt_pure_cmd_timestamp+x} && "$1" != "precmd" ]] && return
 
@@ -137,7 +137,7 @@ prompt_pure_preprompt_render() {
 	[[ -n ${prompt_pure_git_last_dirty_check_timestamp+x} ]] && git_color=red
 
 	# construct preprompt, beginning with path
-	local preprompt="%F{blue}$(basename $PWD)%f"
+	local preprompt="%F{blue}$(pwd_tilde)%f"
 	# git info
 	preprompt+="%F{$git_color}${vcs_info_msg_0_}${prompt_pure_git_dirty}%f"
 	# git pull/push arrows
@@ -194,11 +194,6 @@ prompt_pure_preprompt_render() {
 
 		# modify previous preprompt
 		print -Pn "${clr_prev_preprompt}\e[${lines}A\e[${COLUMNS}D${preprompt}${clr}\n"
-
-		if [[ $prompt_subst_status = 'on' ]]; then
-			# re-eanble prompt_subst for expansion on PS1
-			setopt prompt_subst
-		fi
 
 		# redraw prompt (also resets cursor position)
 		zle && zle .reset-prompt
@@ -332,8 +327,6 @@ prompt_pure_setup() {
 
 	zmodload zsh/datetime
 	zmodload zsh/zle
-	zmodload zsh/parameter
-
 	autoload -Uz add-zsh-hook
 	autoload -Uz vcs_info
 	autoload -Uz async && async
